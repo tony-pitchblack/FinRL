@@ -10,9 +10,6 @@ from finrl.config_tickers import DOW_30_TICKER
 from finrl.meta.data_processor import DataProcessor
 from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
 
-# construct environment
-
-
 def train(
     start_date,
     end_date,
@@ -98,63 +95,113 @@ def train(
         print("Trained model is saved in " + str(cwd))
     else:
         raise ValueError("DRL library input is NOT supported. Please check.")
+    
+    info = {
+        "data_shape": data.shape
+    }
+
+    return info
 
 
 if __name__ == "__main__":
-    env = StockTradingEnv
+    import argparse
 
-    # demo for elegantrl
-    kwargs = (
-        {}
-    )  # in current meta, with respect yahoofinance, kwargs is {}. For other data sources, such as joinquant, kwargs is not empty
-    train(
-        start_date=TRAIN_START_DATE,
-        end_date=TRAIN_END_DATE,
-        ticker_list=DOW_30_TICKER,
-        data_source="yahoofinance",
-        time_interval="1D",
-        technical_indicator_list=INDICATORS,
-        drl_lib="elegantrl",
-        env=env,
-        model_name="ppo",
-        cwd="./test_ppo",
-        erl_params=ERL_PARAMS,
-        break_step=1e5,
-        kwargs=kwargs,
+    # Parse the command-line argument for 'drl_lib'
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--drl_lib',
+        choices=['elegantrl', 'rllib', 'stable_baselines3'],
+        default='stable_baselines3',
+        help="Choose the DRL library for training (default: stable_baselines3)."
+    )
+    parser.add_argument(
+        '--model_name',
+        type=str,
+        required=True,
+        help="The name of the model to use."
+    )
+    parser.add_argument(
+        '--break_step',
+        type=int,
+        default=int(1e5),
+        help="Number of steps to break at for training (default: 1e5)."
+    )
+    parser.add_argument(
+        '--total_episodes',
+        type=int,
+        default=30,
+        help="Total number of episodes for training (default: 30)."
+    )
+    parser.add_argument(
+        '--total_timesteps',
+        type=int,
+        default=int(1e4),
+        help="Total number of timesteps for training (default: 1e4)."
+    )
+    parser.add_argument(
+        '--time_interval',
+        type=str,
+        default="1D",
+        help="Time interval for the data, e.g., '1D', '1H', '5T' (default: '1D')."
     )
 
-    ## if users want to use rllib, or stable-baselines3, users can remove the following comments
+    args = parser.parse_args()
 
-    # # demo for rllib
-    # import ray
-    # ray.shutdown()  # always shutdown previous session if any
-    # train(
-    #     start_date=TRAIN_START_DATE,
-    #     end_date=TRAIN_END_DATE,
-    #     ticker_list=DOW_30_TICKER,
-    #     data_source="yahoofinance",
-    #     time_interval="1D",
-    #     technical_indicator_list=INDICATORS,
-    #     drl_lib="rllib",
-    #     env=env,
-    #     model_name="ppo",
-    #     cwd="./test_ppo",
-    #     rllib_params=RLlib_PARAMS,
-    #     total_episodes=30,
-    # )
-    #
-    # # demo for stable-baselines3
-    # train(
-    #     start_date=TRAIN_START_DATE,
-    #     end_date=TRAIN_END_DATE,
-    #     ticker_list=DOW_30_TICKER,
-    #     data_source="yahoofinance",
-    #     time_interval="1D",
-    #     technical_indicator_list=INDICATORS,
-    #     drl_lib="stable_baselines3",
-    #     env=env,
-    #     model_name="sac",
-    #     cwd="./test_sac",
-    #     agent_params=SAC_PARAMS,
-    #     total_timesteps=1e4,
-    # )
+    env = StockTradingEnv
+
+    if args.drl_lib == "elegantrl":
+        # demo for elegantrl
+        kwargs = (
+            {}
+        )  # in current meta, with respect yahoofinance, kwargs is {}. For other data sources, such as joinquant, kwargs is not empty
+        train(
+            start_date=TRAIN_START_DATE,
+            end_date=TRAIN_END_DATE,
+            ticker_list=DOW_30_TICKER,
+            data_source="yahoofinance",
+            time_interval=args.time_interval,
+            technical_indicator_list=INDICATORS,
+            drl_lib="elegantrl",
+            env=env,
+            model_name=args.model_name,
+            cwd=f"./test_{args.model_name}",
+            erl_params=ERL_PARAMS,
+            break_step=args.break_step, # default: 1e5
+            kwargs=kwargs,
+        )
+    
+    elif args.drl_lib == "rllib":
+        # demo for rllib
+        import ray
+        ray.shutdown()  # always shutdown previous session if any
+        train(
+            start_date=TRAIN_START_DATE,
+            end_date=TRAIN_END_DATE,
+            ticker_list=DOW_30_TICKER,
+            data_source="yahoofinance",
+            time_interval=args.time_interval,
+            technical_indicator_list=INDICATORS,
+            drl_lib="rllib",
+            env=env,
+            model_name=args.model_name,
+            cwd=f"./test_{args.model_name}",
+            rllib_params=RLlib_PARAMS,
+            total_episodes=args.total_episodes, # default: 30
+        )
+
+    elif args.drl_lib == "stable_baselines3":
+        # demo for stable-baselines3
+        train(
+            start_date=TRAIN_START_DATE,
+            end_date=TRAIN_END_DATE,
+            ticker_list=DOW_30_TICKER,
+            data_source="yahoofinance",
+            time_interval=args.time_interval,
+            technical_indicator_list=INDICATORS,
+            drl_lib="stable_baselines3",
+            env=env,
+            model_name=args.model_name,
+            cwd=f"./test_{args.model_name}",
+            agent_params=SAC_PARAMS,
+            total_timesteps=args.total_timesteps, # default: 1e4
+        )
