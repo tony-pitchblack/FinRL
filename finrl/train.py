@@ -3,7 +3,7 @@ from __future__ import annotations
 from finrl.config import ERL_PARAMS
 from finrl.config import INDICATORS
 from finrl.config import RLlib_PARAMS
-from finrl.config import SAC_PARAMS
+from finrl.config import SB3_PARAMS
 from finrl.config import TRAIN_END_DATE
 from finrl.config import TRAIN_START_DATE
 from finrl.config_tickers import DOW_30_TICKER
@@ -202,6 +202,6 @@ if __name__ == "__main__":
             env=env,
             model_name=args.model_name,
             cwd=f"./test_{args.model_name}",
-            agent_params=SAC_PARAMS,
+            agent_params=SB3_PARAMS[args.model_name],
             total_timesteps=args.total_timesteps, # default: 1e4
         )

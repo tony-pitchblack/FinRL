@@ -75,6 +75,14 @@ SAC_PARAMS = {
     "learning_starts": 100,
     "ent_coef": "auto_0.1",
 }
+SB3_PARAMS = {
+    'a2c': A2C_PARAMS, 
+    'sac': SAC_PARAMS,
+    'ddpg': DDPG_PARAMS,
+    'ppo': PPO_PARAMS,
+    'td3': TD3_PARAMS
+}
+
 ERL_PARAMS = {
     "learning_rate": 3e-5,
     "batch_size": 2048,
@@ -85,6 +93,7 @@ ERL_PARAMS = {
     "eval_gap": 30,
     "eval_times": 64,  # bug fix:KeyError: 'eval_times' line 68, in get_model model.eval_times = model_kwargs["eval_times"]
 }
+
 RLlib_PARAMS = {"lr": 5e-5, "train_batch_size": 500, "gamma": 0.99}
 
 
