@@ -29,6 +29,11 @@ from selenium.webdriver.common.by import By
 from stockstats import StockDataFrame as Sdf
 from webdriver_manager.chrome import ChromeDriverManager
 
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="pandas")
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+
 ### Added by aymeric75 for scrap_data function
 
 
