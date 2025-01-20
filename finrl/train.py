@@ -9,7 +9,7 @@ from finrl.config import TRAIN_START_DATE
 from finrl.config_tickers import DOW_30_TICKER
 from finrl.meta.data_processor import DataProcessor
 from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
-from .utils import benchmark_exec_time
+from utils import benchmark_exec_time
 
 @benchmark_exec_time
 def train(
