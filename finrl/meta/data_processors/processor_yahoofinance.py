@@ -209,6 +209,7 @@ class YahooFinanceProcessor:
         end_date: str,
         time_interval: str,
         proxy: str | dict = None,
+        batch_daily = False,
     ) -> pd.DataFrame:
         time_interval = self.convert_interval(time_interval)
 
@@ -221,36 +222,56 @@ class YahooFinanceProcessor:
         end_date = pd.Timestamp(end_date)
         delta = timedelta(days=1)
         data_df = pd.DataFrame()
-        for tic in ticker_list:
-            current_tic_start_date = start_date
-            while (
-                current_tic_start_date <= end_date
-            ):  # downloading daily to workaround yfinance only allowing  max 7 calendar (not trading) days of 1 min data per single download
-                temp_df = yf.download(
-                    tic,
-                    start=current_tic_start_date,
-                    end=current_tic_start_date + delta,
-                    interval=self.time_interval,
-                    proxy=proxy,
-                )
-                if temp_df.columns.nlevels != 1:
-                    temp_df.columns = temp_df.columns.droplevel(1)
+        if batch_daily:
+            # downloading daily to workaround yfinance only allowing  max 7 calendar (not trading) days of 1 min data per single download
+            for tic in ticker_list:
+                current_tic_start_date = start_date
+                while (
+                    current_tic_start_date <= end_date
+                ):  
+                    temp_df = yf.download(
+                        tic,
+                        start=current_tic_start_date,
+                        end=current_tic_start_date + delta,
+                        interval=self.time_interval,
+                        proxy=proxy,
+                    )
+                    if temp_df.columns.nlevels != 1:
+                        temp_df.columns = temp_df.columns.droplevel(1)
 
-                temp_df["tic"] = tic
-                data_df = pd.concat([data_df, temp_df])
-                current_tic_start_date += delta
+                    # temp_df["tic"] = tic
+                    data_df = pd.concat([data_df, temp_df])
+                    current_tic_start_date += delta
+        else:
+            data_df = yf.download(
+                ticker_list,
+                start=start_date,
+                end=end_date,
+                interval=self.time_interval,
+                proxy=proxy,
+            )
 
-        data_df = data_df.reset_index().drop(columns=["Adj Close"])
+        # Convert wide to long format
+        data_df.reset_index(inplace=True)
+        data_df = data_df.sort_index(axis=1).set_index(['Date']).stack(level='Ticker', future_stack=True)
+        data_df.reset_index(inplace=True)
+        data_df.columns.name = ''
+
+        data_df = data_df.drop(columns=["Adj Close"], errors='ignore')
+
         # convert the column names to match processor_alpaca.py as far as poss
-        data_df.columns = [
-            "timestamp",
-            "close",
-            "high",
-            "low",
-            "open",
-            "volume",
-            "tic",
-        ]
+        data_df.rename(columns={col: col.lower() for col in data_df.columns}, inplace=True)
+        data_df.rename(columns={'ticker': 'tic', 'date': 'timestamp'}, inplace=True)
+
+        # data_df.columns = [
+        #     "timestamp",
+        #     "close",
+        #     "high",
+        #     "low",
+        #     "open",
+        #     "volume",
+        #     "tic",
+        # ]
 
         return data_df
 
