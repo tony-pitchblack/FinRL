@@ -19,7 +19,7 @@ pandas>=1.1.5
 #hooks
 pre-commit
 # pyfolio # bugged
-pyfolio-reloaded
+# pyfolio-reloaded
 
 # testing requirements
 pytest
