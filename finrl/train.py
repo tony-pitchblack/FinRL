@@ -97,7 +97,8 @@ def train(
         raise ValueError("DRL library input is NOT supported. Please check.")
     
     info = {
-        "data_shape": data.shape
+        "data_shape": data.shape,
+        "num_stocks": len(ticker_list)
     }
 
     return info

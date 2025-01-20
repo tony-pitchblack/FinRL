@@ -47,6 +47,11 @@ def test(
     cwd = kwargs.get("cwd", "./" + str(model_name))
     print("price_array: ", len(price_array))
 
+    info = {
+        "data_shape": data.shape,
+        "num_stocks": len(ticker_list)
+    }
+
     if drl_lib == "elegantrl":
         from finrl.agents.elegantrl.models import DRLAgent as DRLAgent_erl
 
@@ -56,7 +61,7 @@ def test(
             net_dimension=net_dimension,
             environment=env_instance,
         )
-        return episode_total_assets
+        return episode_total_assets, info
     elif drl_lib == "rllib":
         from finrl.agents.rllib.models import DRLAgent as DRLAgent_rllib
 
@@ -68,14 +73,14 @@ def test(
             turbulence_array=turbulence_array,
             agent_path=cwd,
         )
-        return episode_total_assets
+        return episode_total_assets, info
     elif drl_lib == "stable_baselines3":
         from finrl.agents.stablebaselines3.models import DRLAgent as DRLAgent_sb3
 
         episode_total_assets = DRLAgent_sb3.DRL_prediction_load_from_file(
             model_name=model_name, environment=env_instance, cwd=cwd
         )
-        return episode_total_assets
+        return episode_total_assets, info
     else:
         raise ValueError("DRL library input is NOT supported. Please check.")
 

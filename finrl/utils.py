@@ -35,27 +35,31 @@ def benchmark_exec_time(func, *args, **kwargs):
     from time import perf_counter
 
     model_name = kwargs['model_name']
-    total_timesteps = kwargs.get('total_timesteps', None)
-    total_episodes = kwargs.get('total_episodes', None)
+    if kwargs['drl_lib'] == 'rllib':
+        total_timesteps = kwargs['total_episodes'] * kwargs['rllib_params']['train_batch_size']
+    elif kwargs['drl_lib'] == 'elegantrl':
+        total_timesteps = kwargs['break_step']
+    elif kwargs['drl_lib'] == 'stable_baselines3':
+        total_timesteps = kwargs['total_timesteps']
+    else:
+        raise NotImplementedError
 
     start = perf_counter()
-    info = func(*args, **kwargs)
+    *output, info = func(*args, **kwargs)
     end = perf_counter()
 
-    data_shape = info['data_shape']
     exec_time = pd.Timedelta(seconds=end-start)
 
     cpu_name, cpu_count, system_name = get_cpu_info()
     gpu_name, gpu_count = get_gpu_info()
 
-    func_name = func.__name__
     data = {
-        "func_name": func_name,
+        "func_name": func.__name__,
         "exec_time": exec_time,
-        "data_shape": data_shape,
+        "data_shape": info['data_shape'][0],
+        "num_stocks": info['num_stocks'],
         "model_name": model_name,
         "total_timesteps": total_timesteps,
-        "total_episodes": total_episodes,
         "gpu_count": gpu_count,
         "gpu_name": gpu_name,
         "cpu_count": cpu_count,
@@ -63,5 +67,8 @@ def benchmark_exec_time(func, *args, **kwargs):
         "system_name": system_name,
     }
 
-    series = pd.Series(data, name="system_info")
+    print('\nBenchmark results:')
+    series = pd.Series(data, name="benchmark_results")
     print(series) # TODO: log in file
+
+    return output
