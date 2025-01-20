@@ -3,6 +3,11 @@ import subprocess
 import os
 from functools import wraps
 
+import hashlib
+
+def stable_hash(data):
+    return hashlib.sha256(str(data).encode()).hexdigest()
+
 def get_cpu_info():
     system_name = platform.system()
 
