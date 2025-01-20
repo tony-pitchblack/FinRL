@@ -9,7 +9,9 @@ from finrl.config import TRAIN_START_DATE
 from finrl.config_tickers import DOW_30_TICKER
 from finrl.meta.data_processor import DataProcessor
 from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
+from .utils import benchmark_exec_time
 
+@benchmark_exec_time
 def train(
     start_date,
     end_date,
@@ -101,7 +103,7 @@ def train(
         "num_stocks": len(ticker_list)
     }
 
-    return info
+    return (info,)
 
 
 if __name__ == "__main__":
@@ -118,8 +120,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--model_name',
         type=str,
-        required=True,
-        help="The name of the model to use."
+        default='ppo',
+        help="The name of the model to use. (default: ppo)"
     )
     parser.add_argument(
         '--break_step',
