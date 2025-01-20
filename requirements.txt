@@ -1,6 +1,9 @@
 alpaca_trade_api>=2.1.0
+alpaca-py
+selenium
+webdriver-manager
 ccxt>=1.66.32  # make sure that >=1.66.32
-elegantrl
+# elegantrl
 exchange_calendars==3.6.3 # because raise exception with 4.1.1, success tested with 3.6.3
 gputil
 gymnasium
@@ -15,7 +18,7 @@ pandas>=1.1.5
 
 #hooks
 pre-commit
-pyfolio
+# pyfolio # bugged
 pyfolio-reloaded
 
 # testing requirements
@@ -37,7 +40,7 @@ sphinx_rtd_theme
 
 
 SQLAlchemy
-stable-baselines3[extra]
+# stable-baselines3[extra]
 stockstats>=0.4.0
 swig
 

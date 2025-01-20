@@ -1,0 +1,3 @@
+sudo apt update
+sudo apt install build-essential
+sudo apt install python3.12-dev
