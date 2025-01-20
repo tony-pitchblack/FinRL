@@ -43,7 +43,7 @@ def train(
     file_path = Path(CACHE_DIR) / f"{start_date}_{end_date}_{time_interval}_{data_hash}.csv"
     dp = DataProcessor(data_source, tech_indicator=technical_indicator_list, vix=if_vix, **kwargs)
     if os.path.isfile(file_path):
-        print("Using cached data: {file_path}")
+        print(f"Using cached data: {file_path}")
         data = pd.read_csv(file_path, index_col=0)
     else:
         print("Creating new data.")
