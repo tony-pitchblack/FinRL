@@ -5,7 +5,19 @@ from finrl.config import RLlib_PARAMS
 from finrl.config import TEST_END_DATE
 from finrl.config import TEST_START_DATE
 from finrl.config_tickers import DOW_30_TICKER
-from finrl.meta.env_stock_trading.env_stocktrading import StockTradingEnv
+from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
+
+from finrl.config import TRAINED_MODEL_DIR
+from finrl.config import DATA_SAVE_DIR
+from finrl.config import RESULTS_DIR
+from finrl.config import TENSORBOARD_LOG_DIR
+from finrl.config import CACHE_DIR
+from finrl.main import check_and_make_directories
+
+from finrl.utils import stable_hash
+from pathlib import Path
+import os
+import pandas as pd
 
 
 def test(
@@ -24,21 +36,27 @@ def test(
     # import data processor
     from finrl.meta.data_processor import DataProcessor
 
-    # fetch data
-    dp = DataProcessor(data_source, **kwargs)
-    data = dp.download_data(ticker_list, start_date, end_date, time_interval)
-    data = dp.clean_data(data)
-    data = dp.add_technical_indicator(data, technical_indicator_list)
+    data_hash = stable_hash(tuple(sorted(ticker_list) + sorted(technical_indicator_list)))
+    file_path = Path(CACHE_DIR) / f"{start_date}_{end_date}_{time_interval}_{data_hash}.csv"
+    dp = DataProcessor(data_source, tech_indicator=technical_indicator_list, vix=if_vix, **kwargs)
+    if os.path.isfile(file_path):
+        print(f"Using cached data: {file_path}")
+        data = pd.read_csv(file_path, index_col=0)
+    else:
+        print("Creating new data.")
+        data = dp.download_data(ticker_list, start_date, end_date, time_interval)
+        data = dp.clean_data(data)
+        data = dp.add_technical_indicator(data, technical_indicator_list)
+        if if_vix:
+            data = dp.add_vix(data)
+        data.to_csv(file_path)
 
-    if if_vix:
-        data = dp.add_vix(data)
     price_array, tech_array, turbulence_array = dp.df_to_array(data, if_vix)
-
     env_config = {
         "price_array": price_array,
         "tech_array": tech_array,
         "turbulence_array": turbulence_array,
-        "if_train": False,
+        "if_train": True,
     }
     env_instance = env(config=env_config)
 
@@ -84,21 +102,38 @@ def test(
     else:
         raise ValueError("DRL library input is NOT supported. Please check.")
 
-if __name__ == "__main__":
+def build_parser():
     import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--drl_lib',
         choices=['elegantrl', 'rllib', 'stable_baselines3'],
         default='stable_baselines3',
-        help="Choose the DRL library for testing (default: stable_baselines3)."
+        help="Choose the DRL library for training (default: stable_baselines3)."
     )
     parser.add_argument(
         '--model_name',
         type=str,
-        required=True,
-        help="The name of the model to use."
+        default='ppo',
+        help="The name of the model to use. (default: ppo)"
+    )
+    parser.add_argument(
+        '--break_step',
+        type=int,
+        default=int(1e5),
+        help="Number of steps to break at for training (default: 1e5)."
+    )
+    parser.add_argument(
+        '--total_episodes',
+        type=int,
+        default=30,
+        help="Total number of episodes for training (default: 30)."
+    )
+    parser.add_argument(
+        '--total_timesteps',
+        type=int,
+        default=int(1e4),
+        help="Total number of timesteps for training (default: 1e4)."
     )
     parser.add_argument(
         '--time_interval',
@@ -106,14 +141,16 @@ if __name__ == "__main__":
         default="1D",
         help="Time interval for the data, e.g., '1D', '1H', '5T' (default: '1D')."
     )
-    parser.add_argument(
-        '--episode_num',
-        type=int,
-        default=30,
-        help="Episode number of checkpoint (default: 30). Only used if using `rllib`"
-    )
 
+    return parser
+
+if __name__ == "__main__":
+    parser = build_parser()
     args = parser.parse_args()
+
+    check_and_make_directories(
+        [DATA_SAVE_DIR, TRAINED_MODEL_DIR, TENSORBOARD_LOG_DIR, RESULTS_DIR, CACHE_DIR]
+    )
 
     env = StockTradingEnv
     if args.drl_lib == "elegantrl":
