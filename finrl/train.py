@@ -17,8 +17,8 @@ from finrl.main import check_and_make_directories
 from finrl.config_tickers import DOW_30_TICKER
 from finrl.meta.data_processor import DataProcessor
 from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
-from utils import benchmark_exec_time
-from utils import stable_hash
+from finrl.utils import benchmark_exec_time
+from finrl.utils import stable_hash
 
 import pandas as pd
 from pathlib import Path
@@ -38,7 +38,6 @@ def train(
     if_vix=True,
     **kwargs,
 ):
-
     data_hash = stable_hash(tuple(sorted(ticker_list) + sorted(technical_indicator_list)))
     file_path = Path(CACHE_DIR) / f"{start_date}_{end_date}_{time_interval}_{data_hash}.csv"
     dp = DataProcessor(data_source, tech_indicator=technical_indicator_list, vix=if_vix, **kwargs)
@@ -92,13 +91,15 @@ def train(
             tech_array=tech_array,
             turbulence_array=turbulence_array,
         )
-        model, model_config = agent_rllib.get_model(model_name)
-        model_config["lr"] = rllib_params["lr"]
-        model_config["train_batch_size"] = rllib_params["train_batch_size"]
-        model_config["gamma"] = rllib_params["gamma"]
+        model_config = agent_rllib.get_model_config(model_name)
+        # model_config = model_config.training(
+        #     lr=rllib_params["lr"],
+        #     train_batch_size=rllib_params["train_batch_size"],
+        #     gamma=rllib_params["gamma"]
+        # )
+
         # ray.shutdown()
         trained_model = agent_rllib.train_model(
-            model=model,
             model_name=model_name,
             model_config=model_config,
             total_episodes=total_episodes,
@@ -152,7 +153,7 @@ def build_parser():
     parser.add_argument(
         '--total_episodes',
         type=int,
-        default=30,
+        default=1,
         help="Total number of episodes for training (default: 30)."
     )
     parser.add_argument(
