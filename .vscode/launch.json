@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File with Arguments",
+            "name": "finrl/train.py",
             "type": "debugpy",
             "request": "launch",
             // "program": "${workspaceFolder}/finrl/train.py",
@@ -14,11 +14,38 @@
             "args": [
                 // "${command:pickArgs}"
                 "--drl_lib",
-                "stable_baselines3"
+                // "stable_baselines3",
+                "rllib",
+                // "elegantrl"
+
             ],
             "env": {
-                    "PYTHONPATH": "${workspaceFolder}"
-            }
+                // "PYTHONPATH": "${workspaceFolder}/.venv/bin/python"
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "justMyCode": false
+        },
+
+        {
+            "name": "finrl/test.py",
+            "type": "debugpy",
+            "request": "launch",
+            // "program": "${workspaceFolder}/finrl/test.py",
+            "program": "finrl/test.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "${command:pickArgs}"
+                "--drl_lib",
+                "stable_baselines3",
+                // "rllib",
+                // "elegantrl"
+
+            ],
+            "env": {
+                // "PYTHONPATH": "${workspaceFolder}/.venv/bin/python"
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "justMyCode": false
         },
     ]
 }
