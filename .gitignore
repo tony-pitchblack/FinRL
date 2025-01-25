@@ -1,6 +1,9 @@
 # Custom config
 #results/
 .venv
+test_ppo
+test_sac
+test_ddpg
 
 # working dirs
 datasets

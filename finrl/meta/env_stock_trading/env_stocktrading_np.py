@@ -3,7 +3,7 @@ from __future__ import annotations
 import gymnasium as gym
 import numpy as np
 from numpy import random as rd
-
+import pandas as pd
 
 class StockTradingEnv(gym.Env):
     def __init__(
@@ -55,6 +55,7 @@ class StockTradingEnv(gym.Env):
         self.total_asset = None
         self.gamma_reward = None
         self.initial_total_asset = None
+        self.asset_memory = [self.initial_total_asset]
 
         # environment information
         self.env_name = "StockEnv"
@@ -103,6 +104,7 @@ class StockTradingEnv(gym.Env):
         self.total_asset = self.amount + (self.stocks * price).sum()
         self.initial_total_asset = self.total_asset
         self.gamma_reward = 0.0
+        self.asset_memory = [self.initial_total_asset]
         return self.get_state(price), {}  # state
 
     def step(self, actions):
@@ -142,6 +144,7 @@ class StockTradingEnv(gym.Env):
         total_asset = self.amount + (self.stocks * price).sum()
         reward = (total_asset - self.total_asset) * self.reward_scaling
         self.total_asset = total_asset
+        self.asset_memory.append(total_asset)
 
         self.gamma_reward = self.gamma_reward * self.gamma + reward
         done = self.day == self.max_step
@@ -165,6 +168,16 @@ class StockTradingEnv(gym.Env):
                 self.tech_ary[self.day],
             )
         )  # state.astype(np.float32)
+
+    def save_asset_memory(self):
+        date_list = self.date_memory
+        asset_list = self.asset_memory
+        # print(len(date_list))
+        # print(len(asset_list))
+        df_account_value = pd.DataFrame(
+            {"date": date_list, "account_value": asset_list}
+        )
+        return df_account_value
 
     @staticmethod
     def sigmoid_sign(ary, thresh):

@@ -2,17 +2,16 @@
 from __future__ import annotations
 
 import ray
-from ray.rllib.algorithms.a2c import a2c
-from ray.rllib.algorithms.ddpg import ddpg
-from ray.rllib.algorithms.ppo import ppo
-from ray.rllib.algorithms.sac import sac
-from ray.rllib.algorithms.td3 import td3
+from ray.rllib.algorithms.ppo import PPOConfig
+from ray.rllib.algorithms.sac import SACConfig
 
-MODELS = {"a2c": a2c, "ddpg": ddpg, "td3": td3, "sac": sac, "ppo": ppo}
+from finrl.agents.rllib.callbacks import MetricsLoggerCallback
+from finrl.agents.rllib.utils import print_result
 
-
-# MODEL_KWARGS = {x: config.__dict__[f"{x.upper()}_PARAMS"] for x in MODELS.keys()}
-
+MODEL_CONFIGS = {
+    'ppo': PPOConfig,
+    'sac': SACConfig,
+}
 
 class DRLAgent:
     """Implementations for DRL algorithms
@@ -38,76 +37,69 @@ class DRLAgent:
             make a prediction in a test dataset and get results
     """
 
-    def __init__(self, env, price_array, tech_array, turbulence_array):
+    def __init__(self, env, price_array, tech_array, turbulence_array, val_env_config):
         self.env = env
         self.price_array = price_array
         self.tech_array = tech_array
         self.turbulence_array = turbulence_array
+        self.val_env_config = val_env_config
 
     def get_model(
         self,
         model_name,
-        # policy="MlpPolicy",
-        # policy_kwargs=None,
-        # model_kwargs=None,
+        model_kwargs
     ):
-        if model_name not in MODELS:
+        if model_name not in MODEL_CONFIGS:
             raise NotImplementedError("NotImplementedError")
 
-        # if model_kwargs is None:
-        #    model_kwargs = MODEL_KWARGS[model_name]
+        model_config = (
+            MODEL_CONFIGS[model_name]()
+            .env_runners(
+                num_env_runners=0,
+            )
+            .environment(
+                env=self.env,
+                env_config={
+                    "price_array": self.price_array,
+                    "tech_array": self.tech_array,
+                    "turbulence_array": self.turbulence_array,
+                    "if_train": True,
+                },
+            )
+            .training(
+                **model_kwargs
+            )
+            .evaluation(
+                evaluation_interval=1,  # Specify evaluation frequency (1=after each training step)
+                evaluation_config={
+                    'env': self.env,
+                    'env_config': self.val_env_config
+                },
+            )
+            .callbacks(MetricsLoggerCallback)
+        )
 
-        model = MODELS[model_name]
-        # get algorithm default configration based on algorithm in RLlib
-        if model_name == "a2c":
-            model_config = model.A2C_DEFAULT_CONFIG.copy()
-        elif model_name == "td3":
-            model_config = model.TD3_DEFAULT_CONFIG.copy()
-        else:
-            model_config = model.DEFAULT_CONFIG.copy()
-        # pass env, log_level, price_array, tech_array, and turbulence_array to config
-        model_config["env"] = self.env
-        model_config["log_level"] = "WARN"
-        model_config["env_config"] = {
-            "price_array": self.price_array,
-            "tech_array": self.tech_array,
-            "turbulence_array": self.turbulence_array,
-            "if_train": True,
-        }
+        model = model_config.build()
 
-        return model, model_config
+        return model
 
     def train_model(
-        self, model, model_name, model_config, total_episodes=100, init_ray=True
+        self, model, total_episodes=100, init_ray=True
     ):
-        if model_name not in MODELS:
-            raise NotImplementedError("NotImplementedError")
         if init_ray:
             ray.init(
                 ignore_reinit_error=True
             )  # Other Ray APIs will not work until `ray.init()` is called.
 
-        if model_name == "ppo":
-            trainer = model.PPOTrainer(env=self.env, config=model_config)
-        elif model_name == "a2c":
-            trainer = model.A2CTrainer(env=self.env, config=model_config)
-        elif model_name == "ddpg":
-            trainer = model.DDPGTrainer(env=self.env, config=model_config)
-        elif model_name == "td3":
-            trainer = model.TD3Trainer(env=self.env, config=model_config)
-        elif model_name == "sac":
-            trainer = model.SACTrainer(env=self.env, config=model_config)
+        for ep_idx in range(total_episodes):
+            print(f"Training episode: {ep_idx + 1}/{total_episodes}")
+            result = model.train()
 
-        for _ in range(total_episodes):
-            trainer.train()
+        print_result(result)
 
         ray.shutdown()
 
-        # save the trained model
-        cwd = "./test_" + str(model_name)
-        trainer.save(cwd)
-
-        return trainer
+        return model
 
     @staticmethod
     def DRL_prediction(

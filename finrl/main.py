@@ -69,8 +69,8 @@ def main() -> int:
             {}
         )  # in current meta, with respect yahoofinance, kwargs is {}. For other data sources, such as joinquant, kwargs is not empty
         train(
-            start_date=TRAIN_START_DATE,
-            end_date=TRAIN_END_DATE,
+            train_start_date=TRAIN_START_DATE,
+            train_end_date=TRAIN_END_DATE,
             ticker_list=DOW_30_TICKER,
             data_source="yahoofinance",
             time_interval="1D",

@@ -95,8 +95,17 @@ ERL_PARAMS = {
     "eval_times": 64,  # bug fix:KeyError: 'eval_times' line 68, in get_model model.eval_times = model_kwargs["eval_times"]
 }
 
-RLlib_PARAMS = {"lr": 5e-5, "train_batch_size": 500, "gamma": 0.99}
-
+# RLlib_PARAMS = {"lr": 5e-5, "train_batch_size": 500, "gamma": 0.99}
+RLlib_PARAMS = {
+    "ppo": dict(
+        train_batch_size=2048,
+        num_epochs=10,
+        minibatch_size=128,
+        
+        lr=5e-5,
+        gamma=0.99
+    )
+}
 
 # Possible time zones
 TIME_ZONE_SHANGHAI = "Asia/Shanghai"  # Hang Seng HSI, SSE, CSI
