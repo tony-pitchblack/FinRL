@@ -42,14 +42,14 @@ def train(
 ):
     def get_env_config(start_date, end_date, if_train):
         data_hash = stable_hash(tuple(sorted(ticker_list) + sorted(technical_indicator_list)))
-        file_path = Path(CACHE_DIR) / f"{train_start_date}_{train_end_date}_{time_interval}_{data_hash}.csv"
+        file_path = Path(CACHE_DIR) / f"{start_date}_{end_date}_{time_interval}_{data_hash}.csv"
         dp = DataProcessor(data_source, tech_indicator=technical_indicator_list, vix=if_vix, **kwargs)
         if os.path.isfile(file_path):
             print(f"Using cached data: {file_path}")
             data = pd.read_csv(file_path, index_col=0)
         else:
             print("Creating new data.")
-            data = dp.download_data(ticker_list, train_start_date, train_end_date, time_interval)
+            data = dp.download_data(ticker_list, start_date, end_date, time_interval)
             data = dp.clean_data(data)
             data = dp.add_technical_indicator(data, technical_indicator_list)
             if if_vix:
