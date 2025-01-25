@@ -17,8 +17,8 @@ from finrl.main import check_and_make_directories
 from finrl.config_tickers import DOW_30_TICKER
 from finrl.meta.data_processor import DataProcessor
 from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
-from finrl.utils import benchmark_exec_time
-from finrl.utils import stable_hash
+from finrl.utils.benchmarking import benchmark_exec_time
+from finrl.utils.miscellaneuos import stable_hash
 
 import pandas as pd
 from pathlib import Path
@@ -65,7 +65,7 @@ def train(
         }
 
         return env_config, data.shape
-    
+
     train_env_config, train_data_shape = get_env_config(train_start_date, train_end_date, if_train=True)
     val_env_config, _ = get_env_config(val_start_date, val_end_date, if_train=False)
 

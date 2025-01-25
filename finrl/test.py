@@ -14,7 +14,7 @@ from finrl.config import TENSORBOARD_LOG_DIR
 from finrl.config import CACHE_DIR
 from finrl.main import check_and_make_directories
 
-from finrl.utils import stable_hash
+from finrl.utils.benchmarking import stable_hash
 from pathlib import Path
 import os
 import pandas as pd
