@@ -23,7 +23,7 @@ setup(
     include_package_data=True,
     author="AI4Finance Foundation",
     author_email="contact@ai4finance.org",
-    url="https://github.com/AI4Finance-Foundation/FinRL",
+    url="https://github.com/tony-pitchblack/FinRL",
     license="MIT",
     packages=find_packages(),
     description="FinRL: Financial Reinforcement Learning Framework.",
