@@ -55,7 +55,7 @@ class StockTradingEnv(gym.Env):
         self.total_asset = None
         self.gamma_reward = None
         self.initial_total_asset = None
-        self.asset_memory = [self.initial_total_asset]
+        self.asset_memory = [self.initial_capital]
 
         # environment information
         self.env_name = "StockEnv"
