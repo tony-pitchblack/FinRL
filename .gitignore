@@ -1,6 +1,7 @@
 # Custom config
 #results/
 .venv
+test_ppo
 
 # working dirs
 datasets
