@@ -498,8 +498,9 @@ class YahooFinanceProcessor:
         df = df.sort_values(["timestamp", "tic"]).reset_index(drop=True)
         return df
 
+    @staticmethod
     def df_to_array(
-        self, df: pd.DataFrame, tech_indicator_list: list[str], if_vix: bool
+        df: pd.DataFrame, tech_indicator_list: list[str], if_vix: bool
     ) -> list[np.ndarray]:
         df = df.copy()
         unique_ticker = df.tic.unique()
