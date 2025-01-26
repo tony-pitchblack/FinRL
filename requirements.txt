@@ -24,6 +24,7 @@ pre-commit
 # testing requirements
 pytest
 ray[default]
+ray[rllib]
 ray[tune]
 recommonmark
 dm_tree
