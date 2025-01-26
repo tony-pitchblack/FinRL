@@ -420,13 +420,13 @@ class YahooFinanceProcessor:
         :param data: (df) pandas dataframe
         :return: (df) pandas dataframe
         """
-        vix_df = self.download_data(["VIXY"], self.start, self.end, self.time_interval)
+        vix_df = self.download_data(["^VIX"], self.start, self.end, self.time_interval)
         cleaned_vix = self.clean_data(vix_df)
         print("cleaned_vix\n", cleaned_vix)
         vix = cleaned_vix[["timestamp", "close"]]
         print('cleaned_vix[["timestamp", "close"]\n', vix)
-        vix = vix.rename(columns={"close": "VIXY"})
-        print('vix.rename(columns={"close": "VIXY"}\n', vix)
+        vix = vix.rename(columns={"close": "^VIX"})
+        print('vix.rename(columns={"close": "^VIX"}\n', vix)
 
         df = data.copy()
         print("df\n", df)
@@ -510,7 +510,7 @@ class YahooFinanceProcessor:
                 price_array = df[df.tic == tic][["close"]].values
                 tech_array = df[df.tic == tic][tech_indicator_list].values
                 if if_vix:
-                    turbulence_array = df[df.tic == tic]["VIXY"].values
+                    turbulence_array = df[df.tic == tic]["^VIX"].values
                 else:
                     turbulence_array = df[df.tic == tic]["turbulence"].values
                 if_first_time = False
