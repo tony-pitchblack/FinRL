@@ -287,7 +287,7 @@ class YahooFinanceProcessor:
         trading_days = self.get_trading_days(start=self.start, end=self.end)
         # produce full timestamp index
         if self.time_interval == "1d":
-            times = trading_days
+            times = [pd.Timestamp(day).tz_localize(NY) for day in trading_days]
         elif self.time_interval == "1m":
             times = []
             for day in trading_days:

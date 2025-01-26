@@ -188,6 +188,7 @@ class StockTradingEnv(gym.Env):
         df_account_value = pd.DataFrame(
             {"date": date_list, "account_value": asset_list}
         )
+        df_account_value['date'] = pd.to_datetime(df_account_value['date'])
         return df_account_value
 
     @staticmethod
