@@ -24,9 +24,12 @@ class StockTradingEnv(gym.Env):
         tech_ary = config["tech_array"]
         turbulence_ary = config["turbulence_array"]
         if_train = config["if_train"]
+        timestamp_ary = config['timestamp_array']
+
         self.price_ary = price_ary.astype(np.float32)
         self.tech_ary = tech_ary.astype(np.float32)
         self.turbulence_ary = turbulence_ary
+        self.timestamp_ary = timestamp_ary
 
         self.tech_ary = self.tech_ary * 2**-7
         self.turbulence_bool = (turbulence_ary > turbulence_thresh).astype(np.float32)
@@ -55,7 +58,8 @@ class StockTradingEnv(gym.Env):
         self.total_asset = None
         self.gamma_reward = None
         self.initial_total_asset = None
-        self.asset_memory = [self.initial_capital]
+        self.asset_memory = None
+        self.timestamp_memory = None
 
         # environment information
         self.env_name = "StockEnv"
@@ -77,6 +81,13 @@ class StockTradingEnv(gym.Env):
         self.action_space = gym.spaces.Box(
             low=-1, high=1, shape=(self.action_dim,), dtype=np.float32
         )
+
+    def _get_timestamp(self):
+        if self.day is not None:
+            timestamp = self.timestamp_ary[(self.day + 1) * self.price_ary.shape[1] - 1]
+        else:
+            raise ValueError("Env not initialized")
+        return timestamp
 
     def reset(
         self,
@@ -104,7 +115,8 @@ class StockTradingEnv(gym.Env):
         self.total_asset = self.amount + (self.stocks * price).sum()
         self.initial_total_asset = self.total_asset
         self.gamma_reward = 0.0
-        self.asset_memory = [self.initial_total_asset]
+        self.asset_memory = [self.initial_capital]
+        self.timestamp_memory = [self._get_timestamp()]
         return self.get_state(price), {}  # state
 
     def step(self, actions):
@@ -145,6 +157,7 @@ class StockTradingEnv(gym.Env):
         reward = (total_asset - self.total_asset) * self.reward_scaling
         self.total_asset = total_asset
         self.asset_memory.append(total_asset)
+        self.timestamp_memory.append(self._get_timestamp())
 
         self.gamma_reward = self.gamma_reward * self.gamma + reward
         done = self.day == self.max_step
@@ -170,10 +183,8 @@ class StockTradingEnv(gym.Env):
         )  # state.astype(np.float32)
 
     def save_asset_memory(self):
-        date_list = self.date_memory
+        date_list = self.timestamp_memory
         asset_list = self.asset_memory
-        # print(len(date_list))
-        # print(len(asset_list))
         df_account_value = pd.DataFrame(
             {"date": date_list, "account_value": asset_list}
         )

@@ -82,7 +82,7 @@ class DataProcessor:
 
         return df
 
-    def df_to_array(self, df, if_vix) -> np.array:
+    def df_to_array(self, df, if_vix, return_timestamps=False) -> np.array:
         price_array, tech_array, turbulence_array = self.processor.df_to_array(
             df, self.tech_indicator_list, if_vix
         )
@@ -92,4 +92,11 @@ class DataProcessor:
         tech_inf_positions = np.isinf(tech_array)
         tech_array[tech_inf_positions] = 0
 
-        return price_array, tech_array, turbulence_array
+        if return_timestamps: 
+            # df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed', errors='coerce')
+            # date_series = df['timestamp'].dt.tz_localize('UTC')
+            # timestamp_array = date_series.apply(lambda x: x.timestamp()).values
+            timestamp_array = df['timestamp'].values # TODO: save/load in UNIX timestamps instead of pandas dates
+            return price_array, tech_array, turbulence_array, timestamp_array
+        else:
+            return price_array, tech_array, turbulence_array

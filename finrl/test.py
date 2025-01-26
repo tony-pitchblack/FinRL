@@ -51,11 +51,12 @@ def test(
             data = dp.add_vix(data)
         data.to_csv(file_path)
 
-    price_array, tech_array, turbulence_array = dp.df_to_array(data, if_vix)
+    price_array, tech_array, turbulence_array, timestamp_array = dp.df_to_array(data, if_vix, return_timestamps=True)
     env_config = {
         "price_array": price_array,
         "tech_array": tech_array,
         "turbulence_array": turbulence_array,
+        "timestamp_array": timestamp_array, 
         "if_train": True,
     }
     env_instance = env(config=env_config)

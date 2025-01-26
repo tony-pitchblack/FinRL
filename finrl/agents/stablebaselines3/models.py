@@ -142,14 +142,15 @@ class DRLAgent:
                 i == max_steps - 1
             ):  # more descriptive condition for early termination to clarify the logic
                 account_memory = test_env.env_method(method_name="save_asset_memory")
-                actions_memory = test_env.env_method(method_name="save_action_memory")
+                # actions_memory = test_env.env_method(method_name="save_action_memory")
             # add current state to state memory
             # state_memory=test_env.env_method(method_name="save_state_memory")
 
             if dones[0]:
                 print("hit end!")
                 break
-        return account_memory[0], actions_memory[0]
+        # return account_memory[0], actions_memory[0]
+        return account_memory[0], None
 
     @staticmethod
     def DRL_prediction_load_from_file(model_name, environment, cwd, deterministic=True):
@@ -165,13 +166,14 @@ class DRLAgent:
             raise ValueError(f"Failed to load agent. Error: {str(error)}") from error
 
         # test on the testing env
-        state = environment.reset()
+        state, _ = environment.reset()
         episode_returns = []  # the cumulative_return / initial_account
         episode_total_assets = [environment.initial_total_asset]
         done = False
         while not done:
             action = model.predict(state, deterministic=deterministic)[0]
-            state, reward, done, _ = environment.step(action)
+            state, reward, truncated, terminated, _ = environment.step(action)
+            done = truncated or terminated
 
             total_asset = (
                 environment.amount
@@ -180,6 +182,9 @@ class DRLAgent:
             episode_total_assets.append(total_asset)
             episode_return = total_asset / environment.initial_total_asset
             episode_returns.append(episode_return)
+
+        account_value = environment.save_asset_memory()
+        print(account_value)
 
         print("episode_return", episode_return)
         print("Test Finished!")
