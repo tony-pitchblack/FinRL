@@ -42,7 +42,7 @@ sphinx_rtd_theme
 
 
 SQLAlchemy
-# stable-baselines3[extra]
+stable-baselines3[extra]
 stockstats>=0.4.0
 swig
 
