@@ -115,7 +115,7 @@ class StockTradingEnv(gym.Env):
         self.total_asset = self.amount + (self.stocks * price).sum()
         self.initial_total_asset = self.total_asset
         self.gamma_reward = 0.0
-        self.asset_memory = [self.initial_capital]
+        self.asset_memory = [self.total_asset]
         self.timestamp_memory = [self._get_timestamp()]
         return self.get_state(price), {}  # state
 
