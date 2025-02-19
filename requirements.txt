@@ -51,4 +51,4 @@ wheel>=0.33.6
 wrds
 
 # market data & paper trading API
-yfinance
+yfinance>=0.2.54
