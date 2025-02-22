@@ -93,7 +93,9 @@ class DataProcessor:
         tech_array[tech_nan_positions] = 0
 
         if return_timestamps: 
-            timestamp_array = df['timestamp'].values # TODO: save/load in UNIX timestamps instead of pandas dates
+            # timestamp_array = df['timestamp'].unique().to_numpy() # TODO: save/load in UNIX timestamps instead of pandas dates
+            timestamp_array = np.sort(df["timestamp"].unique().to_numpy())
+
             return price_array, tech_array, turbulence_array, timestamp_array
         else:
             return price_array, tech_array, turbulence_array

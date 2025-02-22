@@ -84,7 +84,7 @@ class StockTradingEnv(gym.Env):
 
     def _get_timestamp(self):
         if self.day is not None:
-            timestamp = self.timestamp_ary[(self.day + 1) * self.price_ary.shape[1] - 1]
+            timestamp = self.timestamp_ary[self.day]
         else:
             raise ValueError("Env not initialized")
         return timestamp
