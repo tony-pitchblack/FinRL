@@ -8,10 +8,11 @@ from finrl.meta.data_processors.processor_wrds import WrdsProcessor as Wrds
 from finrl.meta.data_processors.processor_yahoofinance import (
     YahooFinanceProcessor as YahooFinance,
 )
+from copy import copy
 
 
 class DataProcessor:
-    def __init__(self, data_source, tech_indicator=None, vix=None, **kwargs):
+    def __init__(self, data_source, tech_indicator=None, extra_indicator=None, vix=None, **kwargs):
         if data_source == "alpaca":
             try:
                 API_KEY = kwargs.get("API_KEY")
@@ -34,6 +35,7 @@ class DataProcessor:
         # Initialize variable in case it is using cache and does not use download_data() method
         self.tech_indicator_list = tech_indicator
         self.vix = vix
+        self.extra_indicator_list = extra_indicator
 
     def download_data(
         self, ticker_list, start_date, end_date, time_interval
@@ -51,10 +53,17 @@ class DataProcessor:
 
         return df
 
-    def add_technical_indicator(self, df, tech_indicator_list) -> pd.DataFrame:
-        self.tech_indicator_list = tech_indicator_list
-        df = self.processor.add_technical_indicator(df, tech_indicator_list)
 
+    def add_technical_indicator(self, df, tech_indicator_list, extra_indicator_list=None) -> pd.DataFrame:
+        self.tech_indicator_list = tech_indicator_list
+        self.extra_indicator_list = extra_indicator_list
+
+        all_indicator_list = copy(tech_indicator_list)
+        if extra_indicator_list is not None:
+            all_indicator_list += extra_indicator_list
+
+        print(f"Adding indicators: {all_indicator_list}")
+        df = self.processor.add_technical_indicator(df, all_indicator_list)
         return df
 
     def add_turbulence(self, df) -> pd.DataFrame:
@@ -82,10 +91,14 @@ class DataProcessor:
 
         return df
 
-    def df_to_array(self, df, if_vix=None, return_timestamps=False) -> np.array:
-        if_vix = self.vix if if_vix is None else if_vix
-        price_array, tech_array, turbulence_array = self.processor.df_to_array(
-            df, self.tech_indicator_list, if_vix
+    def df_to_array(self, df, if_vix=None, return_timestamps=False, **kwargs) -> np.array:
+        if_vix = self.vix if if_vix is None else if_vix 
+        price_array, tech_array, turbulence_array, *extra_arrays = self.processor.df_to_array(
+            df,
+            if_vix,
+            self.tech_indicator_list,
+            self.extra_indicator_list if self.extra_indicator_list else [],
+            **kwargs
         )
 
         # fill nan and inf values with 0 for technical indicators
@@ -96,6 +109,6 @@ class DataProcessor:
             # timestamp_array = df['timestamp'].unique().to_numpy() # TODO: save/load in UNIX timestamps instead of pandas dates
             timestamp_array = np.sort(df["timestamp"].unique().to_numpy())
 
-            return price_array, tech_array, turbulence_array, timestamp_array
+            return price_array, tech_array, turbulence_array, timestamp_array, *extra_arrays
         else:
-            return price_array, tech_array, turbulence_array
+            return price_array, tech_array, turbulence_array, *extra_arrays

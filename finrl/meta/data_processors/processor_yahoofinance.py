@@ -498,31 +498,68 @@ class YahooFinanceProcessor:
         df = df.sort_values(["timestamp", "tic"]).reset_index(drop=True)
         return df
 
+    
     @staticmethod
     def df_to_array(
-        df: pd.DataFrame, tech_indicator_list: list[str], if_vix: bool
+        df: pd.DataFrame,
+        if_vix: bool,
+        tech_indicator_list: list[str],
+        extra_indicator_list: list[str] = [],
+        use_extra_indicators = False,
+        if_extra_indicators_tech = False,
+
     ) -> list[np.ndarray]:
+        """
+        if_extra_indicators_tech: 
+            if True then extra indicators are part of resulting techincal indicator array;
+            if False then extra indicators are instead returned in separate arrays
+        """ 
+
         df = df.copy()
         unique_ticker = df.tic.unique()
         if_first_time = True
+
+        tech_indicator_list = set(tech_indicator_list)
+        extra_indicator_list = set(extra_indicator_list)
+        all_indicator_list = list(tech_indicator_list)
+
+        if use_extra_indicators:
+            if not if_extra_indicators_tech:
+                # print('use as extra arrays only')
+                pass
+            else:
+                # print('use as tech indicators')
+                assert extra_indicator_list.issubset(set(df.columns)), "All extra columns should be present in provided dataframe"
+                all_indicator_list += list(extra_indicator_list)
+        else:
+            # print('not use extra indicators at all')
+            df = df.copy().drop(columns=extra_indicator_list, errors='ignore')
+
+        extra_array_list = []
         for tic in unique_ticker:
             if if_first_time:
                 price_array = df[df.tic == tic][["close"]].values
-                tech_array = df[df.tic == tic][tech_indicator_list].values
+                tech_array = df[df.tic == tic][all_indicator_list].values
                 if if_vix:
                     turbulence_array = df[df.tic == tic]["vix"].values
                 else:
                     turbulence_array = df[df.tic == tic]["turbulence"].values
+                
+                if use_extra_indicators and not if_extra_indicators_tech and len(extra_indicator_list) > 0:
+                    for extra_col in extra_indicator_list:
+                        extra_array = df[df.tic == tic][extra_col].values
+                        extra_array_list.append(extra_array)
+                    
                 if_first_time = False
             else:
                 price_array = np.hstack(
                     [price_array, df[df.tic == tic][["close"]].values]
                 )
                 tech_array = np.hstack(
-                    [tech_array, df[df.tic == tic][tech_indicator_list].values]
+                    [tech_array, df[df.tic == tic][all_indicator_list].values]
                 )
         #        print("Successfully transformed into array")
-        return price_array, tech_array, turbulence_array
+        return price_array, tech_array, turbulence_array, *extra_array_list
 
     def get_trading_days(self, start: str, end: str) -> list[str]:
         nyse = tc.get_calendar("NYSE")
