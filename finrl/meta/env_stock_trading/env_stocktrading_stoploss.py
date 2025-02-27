@@ -289,7 +289,7 @@ class StockTradingEnvStopLoss(gym.Env):
         # let's just log what we're doing in terms of max actions at each step.
         self.sum_trades += np.sum(np.abs(actions))
         # print header only first time
-        if self.printed_header is False:
+        if self.print_verbosity > 0 and self.printed_header is False:
             self.log_header()
         # print if it's time.
         if self.print_verbosity > 0 and (self.current_step + 1) % self.print_verbosity == 0:
