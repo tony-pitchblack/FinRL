@@ -305,7 +305,7 @@ class StockTradingEnvStopLoss(gym.Env):
             self.account_information["asset_value"].append(asset_value)
             self.account_information["total_assets"].append(begin_cash + asset_value)
             self.account_information["reward"].append(reward)
-
+            
             # multiply action values by our scalar multiplier and save
             actions = actions * self.hmax
             self.actions_memory.append(
@@ -331,7 +331,9 @@ class StockTradingEnvStopLoss(gym.Env):
                     * self.shares_increment,
                 )
             else:
-                actions = np.where(closings > 0, actions / closings, 0)
+                # hi
+                nonzero_mask = closings > 0
+                actions[nonzero_mask] = actions[nonzero_mask] / closings[nonzero_mask]
 
             # clip actions so we can't sell more assets than we hold
             actions = np.maximum(actions, -np.array(holdings))
@@ -405,12 +407,10 @@ class StockTradingEnvStopLoss(gym.Env):
 
             # Update average buy price
             buys = np.sign(buys)
-            self.n_buys += buys
-            self.avg_buy_price = np.where(
-                buys > 0,
-                self.avg_buy_price + ((closings - self.avg_buy_price) / self.n_buys),
-                self.avg_buy_price,
-            )  # incremental average
+            nonzero_buys = self.n_buys > 0
+            self.avg_buy_price[nonzero_buys] += (
+                closings[nonzero_buys] - self.avg_buy_price[nonzero_buys]
+            ) / self.n_buys[nonzero_buys]
 
             # set as zero when we don't have any holdings anymore
             self.n_buys = np.where(holdings_updated > 0, self.n_buys, 0)
