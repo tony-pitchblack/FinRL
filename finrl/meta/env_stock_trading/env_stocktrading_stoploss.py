@@ -69,6 +69,7 @@ class StockTradingEnvStopLoss(gym.Env):
         buy_cost_pct=3e-3,
         sell_cost_pct=3e-3,
         date_col_name="date",
+        turbulence_col_name="turbulence",
         hmax=10,
         discrete_actions=False,
         shares_increment=1,
@@ -102,6 +103,7 @@ class StockTradingEnvStopLoss(gym.Env):
         self.stoploss_penalty = stoploss_penalty
         self.min_profit_penalty = 1 + profit_loss_ratio * (1 - self.stoploss_penalty)
         self.turbulence_threshold = turbulence_threshold
+        self.turbulence_col_name = turbulence_col_name
         self.daily_information_cols = daily_information_cols
         self.state_space = (
             1 + len(self.assets) + len(self.assets) * len(self.daily_information_cols)
@@ -419,7 +421,7 @@ class StockTradingEnvStopLoss(gym.Env):
             self.date_index += 1
             if self.turbulence_threshold is not None:
                 self.turbulence = self.get_date_vector(
-                    self.date_index, cols=["turbulence"]
+                    self.date_index, cols=[self.turbulence_col_name]
                 )[0]
 
             # Update State
