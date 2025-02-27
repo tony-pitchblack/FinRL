@@ -322,20 +322,22 @@ class StockTradingEnvStopLoss(gym.Env):
                     self.log_step(reason="TURBULENCE")
             # scale cash purchases to asset
             if self.discrete_actions:
-                # convert into integer because we can't buy fraction of shares
-                nonzero_mask = closings > 0
-                actions[nonzero_mask] = actions[nonzero_mask] // closings[nonzero_mask]
+                # # convert into integer because we can't buy fraction of shares
+                # nonzero_mask = closings > 0
+                # actions[nonzero_mask] = actions[nonzero_mask] // closings[nonzero_mask]
+
                 actions = actions.astype(int)
-                # round down actions to the nearest multiplies of shares_increment
-                actions = np.where(
-                    actions >= 0,
-                    (actions // self.shares_increment) * self.shares_increment,
-                    ((actions + self.shares_increment) // self.shares_increment)
-                    * self.shares_increment,
-                )
-            else:
-                nonzero_mask = closings > 0
-                actions[nonzero_mask] = actions[nonzero_mask] / closings[nonzero_mask]
+
+                # # round down actions to the nearest multiplies of shares_increment
+                # actions = np.where(
+                #     actions >= 0,
+                #     (actions // self.shares_increment) * self.shares_increment,
+                #     ((actions + self.shares_increment) // self.shares_increment)
+                #     * self.shares_increment,
+                # )
+            # else:
+            #     nonzero_mask = closings > 0
+            #     actions[nonzero_mask] = actions[nonzero_mask] / closings[nonzero_mask]
 
             # clip actions so we can't sell more assets than we hold
             actions = np.maximum(actions, -np.array(holdings))
