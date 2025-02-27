@@ -4,14 +4,16 @@ import random
 import time
 from copy import deepcopy
 
-import gym
+import gymnasium as gym
 import matplotlib
 import numpy as np
 import pandas as pd
-from gym import spaces
+from gymnasium import spaces
 from stable_baselines3.common import logger
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.logger import Logger, KVWriter
+logger = Logger(folder=None, output_formats=[KVWriter()])
 
 matplotlib.use("Agg")
 
@@ -104,9 +106,9 @@ class StockTradingEnvStopLoss(gym.Env):
         self.state_space = (
             1 + len(self.assets) + len(self.assets) * len(self.daily_information_cols)
         )
-        self.action_space = spaces.Box(low=-1, high=1, shape=(len(self.assets),))
+        self.action_space = spaces.Box(low=-1, high=1, shape=(len(self.assets),), dtype=np.float32)
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(self.state_space,)
+            low=-np.inf, high=np.inf, shape=(self.state_space,), dtype=np.float32
         )
         self.turbulence = 0
         self.episode = -1  # initialize so we can call reset
@@ -167,7 +169,7 @@ class StockTradingEnvStopLoss(gym.Env):
             + self.get_date_vector(self.date_index)
         )
         self.state_memory.append(init_state)
-        return init_state
+        return init_state, {}
 
     def get_date_vector(self, date, cols=None):
         if (cols is None) and (self.cached_data is not None):
@@ -189,36 +191,18 @@ class StockTradingEnvStopLoss(gym.Env):
         self.log_step(reason=reason, terminal_reward=reward)
         # Add outputs to logger interface
         gl_pct = self.account_information["total_assets"][-1] / self.initial_amount
-        logger.record("environment/GainLoss_pct", (gl_pct - 1) * 100)
-        logger.record(
-            "environment/total_assets",
-            int(self.account_information["total_assets"][-1]),
-        )
+        logger.log("environment/GainLoss_pct", (gl_pct - 1) * 100)
+        logger.log("environment/total_assets", int(self.account_information["total_assets"][-1]))
         reward_pct = self.account_information["total_assets"][-1] / self.initial_amount
-        logger.record("environment/total_reward_pct", (reward_pct - 1) * 100)
-        logger.record("environment/total_trades", self.sum_trades)
-        logger.record(
-            "environment/actual_num_trades",
-            self.actual_num_trades,
-        )
-        logger.record(
-            "environment/avg_daily_trades",
-            self.sum_trades / (self.current_step),
-        )
-        logger.record(
-            "environment/avg_daily_trades_per_asset",
-            self.sum_trades / (self.current_step) / len(self.assets),
-        )
-        logger.record("environment/completed_steps", self.current_step)
-        logger.record(
-            "environment/sum_rewards", np.sum(self.account_information["reward"])
-        )
-        logger.record(
-            "environment/cash_proportion",
-            self.account_information["cash"][-1]
-            / self.account_information["total_assets"][-1],
-        )
-        return state, reward, True, {}
+        logger.log("environment/total_reward_pct", (reward_pct - 1) * 100)
+        logger.log("environment/total_trades", self.sum_trades)
+        logger.log("environment/actual_num_trades", self.actual_num_trades)
+        logger.log("environment/avg_daily_trades", self.sum_trades / self.current_step)
+        logger.log("environment/avg_daily_trades_per_asset", self.sum_trades / self.current_step / len(self.assets))
+        logger.log("environment/completed_steps", self.current_step)
+        logger.log("environment/sum_rewards", np.sum(self.account_information["reward"]))
+        logger.log("environment/cash_proportion", self.account_information["cash"][-1] / self.account_information["total_assets"][-1])
+        return state, reward, False, True, {}
 
     def log_step(self, reason, terminal_reward=None):
         if terminal_reward is None:
@@ -444,7 +428,7 @@ class StockTradingEnvStopLoss(gym.Env):
             )
             self.state_memory.append(state)
 
-            return state, reward, False, {}
+            return state, reward, False, False, {}
 
     def get_sb_env(self):
         def get_self():
