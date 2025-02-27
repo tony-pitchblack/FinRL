@@ -95,6 +95,7 @@ class StockTradingEnv(gym.Env):
         if seed is None:
             seed = int(round(time.time() * 1000))
 
+        seed = seed % (2**32 - 1)
         random.seed(seed)
         np.random.seed(seed)
 
