@@ -129,7 +129,9 @@ class StockTradingEnvStopLoss(gym.Env):
     def seed(self, seed=None):
         if seed is None:
             seed = int(round(time.time() * 1000))
+
         random.seed(seed)
+        np.random.seed(seed)
 
     @property
     def current_step(self):
@@ -141,7 +143,7 @@ class StockTradingEnvStopLoss(gym.Env):
         seed=None,
         options=None,
     ):
-        self.seed()
+        self.seed(seed)
         self.sum_trades = 0
         self.actual_num_trades = 0
         self.closing_diff_avg_buy = np.zeros(len(self.assets))

@@ -4,6 +4,8 @@ import gymnasium as gym
 import numpy as np
 from numpy import random as rd
 import pandas as pd
+import random
+import time
 
 class StockTradingEnv(gym.Env):
     def __init__(
@@ -89,12 +91,20 @@ class StockTradingEnv(gym.Env):
             raise ValueError("Env not initialized")
         return timestamp
 
+    def seed(self, seed=None):
+        if seed is None:
+            seed = int(round(time.time() * 1000))
+
+        random.seed(seed)
+        np.random.seed(seed)
+
     def reset(
         self,
         *,
         seed=None,
         options=None,
     ):
+        self.seed(seed)
         self.day = 0
         price = self.price_ary[self.day]
 
