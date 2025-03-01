@@ -13,6 +13,7 @@ from stable_baselines3.common import logger
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.logger import Logger, KVWriter
+from typing import Union, List
 logger = Logger(folder=None, output_formats=[KVWriter()])
 
 matplotlib.use("Agg")
@@ -75,9 +76,10 @@ class StockTradingEnvStopLoss(gym.Env):
         shares_increment=1,
         stoploss_penalty=0.9,
         profit_loss_ratio=2,
-        turbulence_threshold=None,
+        turbulence_threshold: Union[float, list[float], np.ndarray]=None,
         print_verbosity=10,
         initial_amount=1e6,
+        initial_stocks=None,
         daily_information_cols=["open", "close", "high", "low", "volume"],
         cache_indicator_data=True,
         cash_penalty_proportion=0.1,
@@ -97,12 +99,24 @@ class StockTradingEnvStopLoss(gym.Env):
         self.shares_increment = shares_increment
         self.hmax = hmax
         self.initial_amount = initial_amount
+        self.initial_stocks = initial_stocks
         self.print_verbosity = print_verbosity
         self.buy_cost_pct = buy_cost_pct
         self.sell_cost_pct = sell_cost_pct
         self.stoploss_penalty = stoploss_penalty
         self.min_profit_penalty = 1 + profit_loss_ratio * (1 - self.stoploss_penalty)
-        self.turbulence_threshold = turbulence_threshold
+
+        if isinstance(turbulence_threshold, (int, float)):
+            self.turbulence_threshold = np.array([turbulence_threshold] * len(self.dates))
+        elif isinstance(turbulence_threshold, list):
+            self.turbulence_threshold = np.array(turbulence_threshold)
+        else:
+            self.turbulence_threshold = turbulence_threshold
+        
+        if self.turbulence_threshold is not None:
+            assert len(self.turbulence_threshold) == len(self.dates), \
+                "Length of turbulence_threshold array must equal the number of dates in the data."
+
         self.turbulence_col_name = turbulence_col_name
         self.daily_information_cols = daily_information_cols
         self.state_space = (
@@ -125,6 +139,12 @@ class StockTradingEnvStopLoss(gym.Env):
                 self.get_date_vector(i) for i, _ in enumerate(self.dates)
             ]
             print("data cached!")
+
+        # Set initial stocks: if not provided, use zero holdings for each asset.
+        if initial_stocks is None:
+            self.initial_stocks = [0] * len(self.assets)
+        else:
+            self.initial_stocks = initial_stocks
 
     def seed(self, seed=None):
         if seed is None:
@@ -170,9 +190,10 @@ class StockTradingEnvStopLoss(gym.Env):
         }
         init_state = np.array(
             [self.initial_amount]
-            + [0] * len(self.assets)
+            + list(self.initial_stocks)
             + self.get_date_vector(self.date_index)
         )
+        
         self.state_memory.append(init_state)
         return init_state, {}
 
@@ -316,6 +337,7 @@ class StockTradingEnvStopLoss(gym.Env):
         # log initial state
         if self.print_verbosity > 0 and (self.current_step + 1) % self.print_verbosity == 0:
             self.log_step(reason="update")
+
         # if we're at the end
         if self.date_index == len(self.dates) - 1:
             # if we hit the end, set reward to total gains (or losses)
@@ -326,6 +348,8 @@ class StockTradingEnvStopLoss(gym.Env):
             holdings = self.state_memory[-1][1 : len(self.assets) + 1]
             assert min(holdings) >= 0
             closings = np.array(self.get_date_vector(self.date_index, cols=["close"]))
+            # print(f"closings: {closings}")
+            # print(f"holdings: {holdings}")
             asset_value = np.dot(holdings, closings)
             # reward is (cash + assets) - (cash_last_step + assets_last_step)
             reward = self.get_reward()
@@ -344,7 +368,8 @@ class StockTradingEnvStopLoss(gym.Env):
             actions = np.where(closings > 0, actions, 0)
             if self.turbulence_threshold is not None:
                 # if turbulence goes over threshold, just clear out all positions
-                if self.turbulence >= self.turbulence_threshold:
+                current_threshold = self.turbulence_threshold[self.date_index]
+                if self.turbulence >= current_threshold:
                     actions = -(np.array(holdings) * closings)
                     if self.print_verbosity > 0:
                         self.log_step(reason="TURBULENCE")
