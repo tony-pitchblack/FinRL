@@ -192,14 +192,29 @@ class StockTradingEnvStopLoss(gym.Env):
             return v
 
     def return_terminal(self, reason="Last Date", reward=0):
+        # Retrieve the last state from state memory.
         state = self.state_memory[-1]
-        gl_pct = self.account_information["total_assets"][-1] / self.initial_amount
-        reward_pct = self.account_information["total_assets"][-1] / self.initial_amount
+        
+        # Extract final cash and holdings from the last state.
+        final_cash = state[0]
+        holdings = state[1 : len(self.assets) + 1]
+        
+        # Get the closing prices for the current date (using the current date_index).
+        closings = np.array(self.get_date_vector(self.date_index, cols=["close"]))
+        
+        # Compute the final asset value and total assets.
+        final_asset_value = np.dot(holdings, closings)
+        final_total_assets = final_cash + final_asset_value
+
+        # Compute gain/loss percentages.
+        gl_pct = final_total_assets / self.initial_amount
+        reward_pct = final_total_assets / self.initial_amount
+
         if self.print_verbosity > 0:
             self.log_step(reason=reason, terminal_reward=reward)
-            # Add outputs to logger interface
+            # Log outputs using the logger.
             logger.log("environment/GainLoss_pct", (gl_pct - 1) * 100)
-            logger.log("environment/total_assets", int(self.account_information["total_assets"][-1]))
+            logger.log("environment/total_assets", int(final_total_assets))
             logger.log("environment/total_reward_pct", (reward_pct - 1) * 100)
             logger.log("environment/total_trades", self.sum_trades)
             logger.log("environment/actual_num_trades", self.actual_num_trades)
@@ -207,9 +222,16 @@ class StockTradingEnvStopLoss(gym.Env):
             logger.log("environment/avg_daily_trades_per_asset", self.sum_trades / self.current_step / len(self.assets))
             logger.log("environment/completed_steps", self.current_step)
             logger.log("environment/sum_rewards", np.sum(self.account_information["reward"]))
-            logger.log("environment/cash_proportion", self.account_information["cash"][-1] / self.account_information["total_assets"][-1])
+            logger.log("environment/cash_proportion", final_cash / final_total_assets)
+
+        # Append the terminal state's info to the account information.
+        self.account_information["cash"].append(final_cash)
+        self.account_information["asset_value"].append(final_asset_value)
+        self.account_information["total_assets"].append(final_total_assets)
+        self.account_information["reward"].append(reward)
 
         return state, reward, False, True, {}
+
 
     def log_step(self, reason, terminal_reward=None):
         if terminal_reward is None:
@@ -291,7 +313,7 @@ class StockTradingEnvStopLoss(gym.Env):
         # print header only first time
         if self.print_verbosity > 0 and self.printed_header is False:
             self.log_header()
-        # print if it's time.
+        # log initial state
         if self.print_verbosity > 0 and (self.current_step + 1) % self.print_verbosity == 0:
             self.log_step(reason="update")
         # if we're at the end
@@ -464,6 +486,9 @@ class StockTradingEnvStopLoss(gym.Env):
         if self.current_step == 0:
             return None
         else:
+            # print(f"saving asset memory of length: {len(self.account_information['cash'])}")
+            # print(f"self.dates length: {len(self.dates)}")
+
             self.account_information["date"] = self.dates[
                 -len(self.account_information["cash"]) :
             ]
