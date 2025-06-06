@@ -27,7 +27,7 @@ github = "https://github.com/finrl/finrl-library"
 [tool.poetry.dependencies]
 python = ">=3.10"
 alpaca-trade-api = "^3"
-alpaca-py = "^3"
+alpaca-py = "*"
 ccxt = "^3"
 exchange-calendars = "3.6.3"  # Pinned to working version
 jqdatasdk = "^1"
@@ -46,15 +46,9 @@ gdown = "*"
 selenium = "*"
 webdriver-manager = "*"
 beautifulsoup4 = "*"
-
-[tool.poetry.group.ray.dependencies]
 ray = {extras=["default", "tune", "rllib"], version = "^2"}
-
-[tool.poetry.group.elegantrl.dependencies]
-elegantrl = {git="https://github.com/AI4Finance-Foundation/ElegantRL.git#egg=elegantrl"}
-
-[tool.poetry.group.sb3.dependencies]
-stable-baselines3 = {version = ">=2.0.0a5", extras = ["extra"]}
+# elegantrl = {git="https://github.com/AI4Finance-Foundation/ElegantRL.git#egg=elegantrl"}
+# stable-baselines3 = {version = ">=2.0.0a5", extras = ["extra"]}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24"
