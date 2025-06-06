@@ -53,3 +53,5 @@ wrds
 
 # market data & paper trading API
 yfinance>=0.2.54
+jupyter
+ipykernel
