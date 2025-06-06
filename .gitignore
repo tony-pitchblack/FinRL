@@ -1,6 +1,7 @@
 # Custom config
 #results/
 .venv
+.env
 test_ppo
 
 # working dirs
