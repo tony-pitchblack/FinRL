@@ -26,19 +26,35 @@ github = "https://github.com/finrl/finrl-library"
 
 [tool.poetry.dependencies]
 python = ">=3.10"
-elegantrl = {git="https://github.com/AI4Finance-Foundation/ElegantRL.git#egg=elegantrl"}
 alpaca-trade-api = "^3"
+alpaca-py = "^3"
 ccxt = "^3"
-exchange-calendars = "^4"
+exchange-calendars = "3.6.3"  # Pinned to working version
 jqdatasdk = "^1"
 pyfolio = "^0.9"
 pyportfolioopt = "^1"
-ray = {extras=["default", "tune"], version = "^2"}
 scikit-learn = "^1"
-stable-baselines3 = {version = ">=2.0.0a5", extras = ["extra"]}
 stockstats = "^0.5"
 wrds = "^3"
 yfinance = "^0.2"
+gputil = "*"
+gymnasium = "*"
+lz4 = "*"
+tensorboardX = "*"
+wandb = "*"
+gdown = "*"
+selenium = "*"
+webdriver-manager = "*"
+beautifulsoup4 = "*"
+
+[tool.poetry.group.ray.dependencies]
+ray = {extras=["default", "tune", "rllib"], version = "^2"}
+
+[tool.poetry.group.elegantrl.dependencies]
+elegantrl = {git="https://github.com/AI4Finance-Foundation/ElegantRL.git#egg=elegantrl"}
+
+[tool.poetry.group.sb3.dependencies]
+stable-baselines3 = {version = ">=2.0.0a5", extras = ["extra"]}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24"
@@ -46,6 +62,14 @@ isort = "^5"
 jupyter = "^1"
 mypy = "^1"
 pandas-stubs = "^2"
+pre-commit = "*"
+pytest = "*"
+recommonmark = "*"
+dm_tree = "*"
+sphinx = "*"
+sphinx_rtd_theme = "*"
+ipykernel = "*"
+SQLAlchemy = "*"
 
 [build-system]
 requires = ["poetry-core"]
