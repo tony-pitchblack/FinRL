@@ -50,6 +50,7 @@ swig
 tensorboardX
 wheel>=0.33.6
 wrds
+wandb
 
 # market data & paper trading API
 yfinance>=0.2.54
