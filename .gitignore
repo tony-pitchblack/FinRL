@@ -3,7 +3,7 @@
 .venv
 .env
 test_ppo
-
+wandb/
 # working dirs
 datasets
 trained_models
