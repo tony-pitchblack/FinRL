@@ -280,7 +280,13 @@ class YahooFinanceProcessor:
 
         return data_df
 
-    def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
+    def clean_data(
+        self,
+        df: pd.DataFrame,
+        day_start_hour: int = 8,
+        day_end_hour: int = 16
+    ) -> pd.DataFrame:
+
         tic_list = np.unique(df.tic.values)
         NY = "America/New_York"
 
@@ -301,9 +307,12 @@ class YahooFinanceProcessor:
             # Vectorized hourly time generation  
             times = []
             for day in trading_days:
-                day_start = pd.Timestamp(day + " 09:00:00").tz_localize(NY)
-                day_end = pd.Timestamp(day + " 19:00:00").tz_localize(NY)
-                day_times = pd.date_range(day_start, day_end, freq='1H')[:-1]  # Exclude 19:00
+                assert day_start_hour >= 0 and day_start_hour < 24, "day_start_hour must be between 0 and 23"
+                assert day_end_hour >= 0 and day_end_hour < 24, "day_end_hour must be between 0 and 23"
+
+                day_start = pd.Timestamp(day + f" {day_start_hour:02d}:00:00").tz_localize(NY)
+                day_end = pd.Timestamp(day + f" {day_end_hour:02d}:00:00").tz_localize(NY)
+                day_times = pd.date_range(day_start, day_end, freq='1H')[:-1]  # Exclude last hour
                 times.extend(day_times)
             times = pd.DatetimeIndex(times)
         else:
