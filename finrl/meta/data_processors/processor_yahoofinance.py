@@ -28,7 +28,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from stockstats import StockDataFrame as Sdf
 from webdriver_manager.chrome import ChromeDriverManager
-
+from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="pandas")
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -296,12 +296,12 @@ class YahooFinanceProcessor:
                 for i in range(390):  # 390 minutes in trading day
                     times.append(current_time)
                     current_time += pd.Timedelta(minutes=1)
-        elif self.time_interval in ["1h", "60m"]:
+        elif self.time_interval == '1h':
             times = []
             for day in trading_days:
-                # Yahoo’s 1-hour candles run 09:30, 10:30, …, 15:30
-                current_time  = pd.Timestamp(day + " 09:30:00").tz_localize(NY)
-                market_close  = pd.Timestamp(day + " 16:00:00").tz_localize(NY)
+                # Yahoo’s 1-hour candles run 09:00, 10:00, …, 16:00
+                current_time  = pd.Timestamp(day + " 09:00:00").tz_localize(NY)
+                market_close  = pd.Timestamp(day + " 19:00:00").tz_localize(NY)
                 while current_time <= market_close - pd.Timedelta(hours=1):
                     times.append(current_time)
                     current_time += pd.Timedelta(hours=1)
@@ -312,7 +312,7 @@ class YahooFinanceProcessor:
 
         # create a new dataframe with full timestamp series
         new_df = pd.DataFrame()
-        for tic in tic_list:
+        for tic in tqdm(tic_list, desc="Cleaning tickers"):
             tmp_df = pd.DataFrame(
                 columns=["open", "high", "low", "close", "volume"], index=times
             )
@@ -328,7 +328,8 @@ class YahooFinanceProcessor:
                 else:                                      # aware (UTC from Yahoo) → convert
                     ts = ts.tz_convert(NY)
 
-                tmp_df.loc[ts] = tic_df.iloc[i][["open", "high", "low", "close", "volume"]]
+                if ts in tmp_df.index:
+                    tmp_df.loc[ts] = tic_df.iloc[i][["open", "high", "low", "close", "volume"]]
 
             # print("(9) tmp_df\n", tmp_df.to_string()) # print ALL dataframe to check for missing rows from download
 
@@ -509,8 +510,8 @@ class YahooFinanceProcessor:
         return df
 
     
-    @staticmethod
     def df_to_array(
+        self,
         df: pd.DataFrame,
         if_vix: bool,
         tech_indicator_list: list[str],
