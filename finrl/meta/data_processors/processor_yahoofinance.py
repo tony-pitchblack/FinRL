@@ -296,6 +296,15 @@ class YahooFinanceProcessor:
                 for i in range(390):  # 390 minutes in trading day
                     times.append(current_time)
                     current_time += pd.Timedelta(minutes=1)
+        elif self.time_interval in ["1h", "60m"]:
+            times = []
+            for day in trading_days:
+                # Yahoo’s 1-hour candles run 09:30, 10:30, …, 15:30
+                current_time  = pd.Timestamp(day + " 09:30:00").tz_localize(NY)
+                market_close  = pd.Timestamp(day + " 16:00:00").tz_localize(NY)
+                while current_time <= market_close - pd.Timedelta(hours=1):
+                    times.append(current_time)
+                    current_time += pd.Timedelta(hours=1)
         else:
             raise ValueError(
                 "Data clean at given time interval is not supported for YahooFinance data."
@@ -310,10 +319,17 @@ class YahooFinanceProcessor:
             tic_df = df[
                 df.tic == tic
             ]  # extract just the rows from downloaded data relating to this tic
-            for i in range(tic_df.shape[0]):  # fill empty DataFrame using original data
-                tmp_df.loc[tic_df.iloc[i]["timestamp"].tz_localize(NY)] = tic_df.iloc[
-                    i
-                ][["open", "high", "low", "close", "volume"]]
+            for i in range(tic_df.shape[0]):          # fill empty DataFrame using original data
+                ts = tic_df.iloc[i]["timestamp"]
+
+                # Only localize *naïve* timestamps; convert those that are already aware
+                if ts.tzinfo is None or ts.tz is None:     # naïve → attach NY
+                    ts = ts.tz_localize(NY)
+                else:                                      # aware (UTC from Yahoo) → convert
+                    ts = ts.tz_convert(NY)
+
+                tmp_df.loc[ts] = tic_df.iloc[i][["open", "high", "low", "close", "volume"]]
+
             # print("(9) tmp_df\n", tmp_df.to_string()) # print ALL dataframe to check for missing rows from download
 
             # if close on start date is NaN, fill data with first valid close
