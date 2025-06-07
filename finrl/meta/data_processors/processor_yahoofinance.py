@@ -285,114 +285,146 @@ class YahooFinanceProcessor:
         NY = "America/New_York"
 
         trading_days = self.get_trading_days(start=self.start, end=self.end)
-        # produce full timestamp index
+        
+        # Generate full timestamp index (vectorized)
         if self.time_interval == "1d":
-            times = [pd.Timestamp(day).tz_localize(NY) for day in trading_days]
+            times = pd.to_datetime(trading_days).tz_localize(NY)
         elif self.time_interval == "1m":
+            # Vectorized time generation for minutes
             times = []
             for day in trading_days:
-                #                NY = "America/New_York"
-                current_time = pd.Timestamp(day + " 09:30:00").tz_localize(NY)
-                for i in range(390):  # 390 minutes in trading day
-                    times.append(current_time)
-                    current_time += pd.Timedelta(minutes=1)
+                day_start = pd.Timestamp(day + " 09:30:00").tz_localize(NY)
+                day_times = pd.date_range(day_start, periods=390, freq='1T')
+                times.extend(day_times)
+            times = pd.DatetimeIndex(times)
         elif self.time_interval == '1h':
+            # Vectorized hourly time generation  
             times = []
             for day in trading_days:
-                # Yahoo’s 1-hour candles run 09:00, 10:00, …, 16:00
-                current_time  = pd.Timestamp(day + " 09:00:00").tz_localize(NY)
-                market_close  = pd.Timestamp(day + " 19:00:00").tz_localize(NY)
-                while current_time <= market_close - pd.Timedelta(hours=1):
-                    times.append(current_time)
-                    current_time += pd.Timedelta(hours=1)
+                day_start = pd.Timestamp(day + " 09:00:00").tz_localize(NY)
+                day_end = pd.Timestamp(day + " 19:00:00").tz_localize(NY)
+                day_times = pd.date_range(day_start, day_end, freq='1H')[:-1]  # Exclude 19:00
+                times.extend(day_times)
+            times = pd.DatetimeIndex(times)
         else:
             raise ValueError(
                 "Data clean at given time interval is not supported for YahooFinance data."
             )
 
-        # create a new dataframe with full timestamp series
-        new_df = pd.DataFrame()
-        for tic in tqdm(tic_list, desc="Cleaning tickers"):
-            tmp_df = pd.DataFrame(
-                columns=["open", "high", "low", "close", "volume"], index=times
-            )
-            tic_df = df[
-                df.tic == tic
-            ]  # extract just the rows from downloaded data relating to this tic
-            for i in range(tic_df.shape[0]):          # fill empty DataFrame using original data
-                ts = tic_df.iloc[i]["timestamp"]
+        # Prepare input data with optimized timestamp handling
+        df_work = df.copy()
+        
+        # Vectorized timestamp conversion
+        def convert_timestamp_vectorized(ts_series):
+            """Convert timestamps to NY timezone efficiently"""
+            converted_series = ts_series.copy()
+            
+            # Check if series is already timezone-aware
+            if hasattr(ts_series.dtype, 'tz') and ts_series.dtype.tz is not None:
+                # Already timezone-aware, convert to NY
+                return ts_series.dt.tz_convert(NY)
+            else:
+                # Check first non-null timestamp to determine if naive or aware
+                first_valid_idx = ts_series.first_valid_index()
+                if first_valid_idx is not None:
+                    sample_ts = ts_series.iloc[first_valid_idx]
+                    if hasattr(sample_ts, 'tzinfo') and sample_ts.tzinfo is not None:
+                        # Aware timestamps - convert to NY
+                        return ts_series.dt.tz_convert(NY)
+                    else:
+                        # Naive timestamps - localize to NY
+                        return ts_series.dt.tz_localize(NY)
+                else:
+                    return ts_series
 
-                # Only localize *naïve* timestamps; convert those that are already aware
-                if ts.tzinfo is None or ts.tz is None:     # naïve → attach NY
-                    ts = ts.tz_localize(NY)
-                else:                                      # aware (UTC from Yahoo) → convert
-                    ts = ts.tz_convert(NY)
+        df_work['timestamp'] = convert_timestamp_vectorized(df_work['timestamp'])
 
-                if ts in tmp_df.index:
-                    tmp_df.loc[ts] = tic_df.iloc[i][["open", "high", "low", "close", "volume"]]
-
-            # print("(9) tmp_df\n", tmp_df.to_string()) # print ALL dataframe to check for missing rows from download
-
-            # if close on start date is NaN, fill data with first valid close
-            # and set volume to 0.
-            if str(tmp_df.iloc[0]["close"]) == "nan":
-                print("NaN data on start date, fill using first valid data.")
-                for i in range(tmp_df.shape[0]):
-                    if str(tmp_df.iloc[i]["close"]) != "nan":
-                        first_valid_close = tmp_df.iloc[i]["close"]
-                        tmp_df.iloc[0] = [
-                            first_valid_close,
-                            first_valid_close,
-                            first_valid_close,
-                            first_valid_close,
-                            0.0,
-                        ]
-                        break
-
-            # if the close price of the first row is still NaN (All the prices are NaN in this case)
-            if str(tmp_df.iloc[0]["close"]) == "nan":
-                print(
-                    "Missing data for ticker: ",
-                    tic,
-                    " . The prices are all NaN. Fill with 0.",
-                )
-                tmp_df.iloc[0] = [
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                ]
-
-            # fill NaN data with previous close and set volume to 0.
-            for i in range(tmp_df.shape[0]):
-                if str(tmp_df.iloc[i]["close"]) == "nan":
-                    previous_close = tmp_df.iloc[i - 1]["close"]
-                    if str(previous_close) == "nan":
-                        raise ValueError
-                    tmp_df.iloc[i] = [
-                        previous_close,
-                        previous_close,
-                        previous_close,
-                        previous_close,
-                        0.0,
-                    ]
-                    # print(tmp_df.iloc[i], " Filled NaN data with previous close and set volume to 0. ticker: ", tic)
-
-            # merge single ticker data to new DataFrame
-            tmp_df = tmp_df.astype(float)
-            tmp_df["tic"] = tic
-            new_df = pd.concat([new_df, tmp_df])
-
-        #            print(("Data clean for ") + tic + (" is finished."))
-
-        # reset index and rename columns
-        new_df = new_df.reset_index()
-        new_df = new_df.rename(columns={"index": "timestamp"})
-
-        #        print("Data clean all finished!")
-
-        return new_df
+        # Create complete DataFrame structure using vectorized operations
+        print("Creating complete timestamp grid...")
+        
+        # Create MultiIndex for all timestamp-ticker combinations
+        full_index = pd.MultiIndex.from_product(
+            [times, tic_list], 
+            names=['timestamp', 'tic']
+        )
+        
+        # Initialize complete DataFrame with NaN values
+        complete_df = pd.DataFrame(
+            index=full_index,
+            columns=['open', 'high', 'low', 'close', 'volume'],
+            dtype=float
+        )
+        
+        # Prepare input data for efficient merging
+        df_indexed = df_work.set_index(['timestamp', 'tic'])
+        
+        # Vectorized data filling - update all at once
+        print("Filling data using vectorized operations...")
+        complete_df.update(df_indexed[['open', 'high', 'low', 'close', 'volume']])
+        
+        # Reset index for processing
+        complete_df = complete_df.reset_index()
+        
+        # Vectorized missing data handling
+        print("Handling missing data with vectorized operations...")
+        
+        # Sort by ticker and timestamp for proper processing
+        complete_df = complete_df.sort_values(['tic', 'timestamp'])
+        
+        def process_ticker_vectorized(group):
+            """Process a single ticker's data with vectorized operations"""
+            # Create a copy to avoid SettingWithCopyWarning
+            ticker_data = group.copy()
+            
+            # Handle first row NaN
+            if pd.isna(ticker_data.iloc[0]['close']):
+                first_valid_idx = ticker_data['close'].first_valid_index()
+                if first_valid_idx is not None:
+                    # Fill first row with first valid close price
+                    first_valid_close = ticker_data.loc[first_valid_idx, 'close']
+                    ticker_data.iloc[0, ticker_data.columns.get_indexer(['open', 'high', 'low', 'close'])] = first_valid_close
+                    ticker_data.iloc[0, ticker_data.columns.get_loc('volume')] = 0.0
+                    print("NaN data on start date, fill using first valid data.")
+                else:
+                    # All prices are NaN - fill with 0
+                    print(f"Missing data for ticker: {ticker_data.iloc[0]['tic']}. The prices are all NaN. Fill with 0.")
+                    ticker_data.iloc[0, ticker_data.columns.get_indexer(['open', 'high', 'low', 'close', 'volume'])] = 0.0
+            
+            # Vectorized forward filling with volume handling
+            price_cols = ['open', 'high', 'low', 'close']
+            
+            # Track which rows have NaN close prices before filling
+            close_na_mask = ticker_data['close'].isna()
+            
+            # Forward fill all price columns at once
+            ticker_data[price_cols] = ticker_data[price_cols].fillna(method='ffill')
+            
+            # Set volume to 0 for rows that were forward-filled (excluding first row)
+            forward_filled_mask = close_na_mask & (ticker_data.index != ticker_data.index[0])
+            ticker_data.loc[forward_filled_mask, 'volume'] = 0.0
+            
+            # Forward fill volume as well, then override with 0 where appropriate
+            ticker_data['volume'] = ticker_data['volume'].fillna(method='ffill').fillna(0.0)
+            ticker_data.loc[forward_filled_mask, 'volume'] = 0.0
+            
+            return ticker_data
+        
+        # Process all tickers with vectorized operations
+        print("Processing tickers with vectorized operations...")
+        processed_df = complete_df.groupby('tic', group_keys=False).apply(process_ticker_vectorized)
+        
+        # Final optimizations
+        print("Applying final optimizations...")
+        
+        # Vectorized type conversion
+        numeric_cols = ['open', 'high', 'low', 'close', 'volume']
+        processed_df[numeric_cols] = processed_df[numeric_cols].astype(float)
+        
+        # Single sort operation for final ordering
+        final_df = processed_df.sort_values(['timestamp', 'tic']).reset_index(drop=True)
+        
+        print("Data clean all finished!")
+        return final_df
 
     def add_technical_indicator(
         self, data: pd.DataFrame, tech_indicator_list: list[str]
