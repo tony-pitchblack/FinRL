@@ -28,12 +28,13 @@ class YahooDownloader:
 
     """
 
-    def __init__(self, start_date: str, end_date: str, ticker_list: list):
+    def __init__(self, start_date: str, end_date: str, ticker_list: list, time_interval: str = '1d'):
         self.start_date = start_date
         self.end_date = end_date
         self.ticker_list = ticker_list
+        self.time_interval = time_interval
 
-    def fetch_data(self, proxy=None, auto_adjust=False) -> pd.DataFrame:
+    def fetch_data(self, proxy=None) -> pd.DataFrame:
         """Fetches data from Yahoo API
         Parameters
         ----------
@@ -49,14 +50,8 @@ class YahooDownloader:
         num_failures = 0
         for tic in self.ticker_list:
             temp_df = yf.download(
-                tic,
-                start=self.start_date,
-                end=self.end_date,
-                proxy=proxy,
-                auto_adjust=auto_adjust,
+                tic, start=self.start_date, end=self.end_date, proxy=proxy, interval=self.time_interval
             )
-            if temp_df.columns.nlevels != 1:
-                temp_df.columns = temp_df.columns.droplevel(1)
             temp_df["tic"] = tic
             if len(temp_df) > 0:
                 # data_df = data_df.append(temp_df)
@@ -67,28 +62,39 @@ class YahooDownloader:
             raise ValueError("no data is fetched.")
         # reset the index, we want to use numbers as index instead of dates
         data_df = data_df.reset_index()
-        try:
-            # convert the column names to standardized names
-            data_df.rename(
-                columns={
-                    "Date": "date",
-                    "Adj Close": "adjcp",
-                    "Close": "close",
-                    "High": "high",
-                    "Low": "low",
-                    "Volume": "volume",
-                    "Open": "open",
-                    "tic": "tic",
-                },
-                inplace=True,
-            )
 
-            # use adjusted close price instead of close price
-            data_df["close"] = data_df["adjcp"]
-            # drop the adjusted close price column
-            data_df = data_df.drop(labels="adjcp", axis=1)
+        try:
+            # Convert wide to long format
+            # print(f"DATA COLS: {data_df.columns}")
+            data_df = data_df.sort_index(axis=1).set_index(['Date']).drop(columns=['tic']).stack(level='Ticker', future_stack=True)
+            data_df.reset_index(inplace=True)
+            data_df.columns.name = ''
+
+            # convert the column names to standardized names
+            data_df.rename(columns={'Ticker': 'Tic', 'Adj Close': 'Adjcp'}, inplace=True)
+            data_df.rename(columns={col: col.lower() for col in data_df.columns}, inplace=True)
+
+            columns = [
+                "date",
+                "tic",
+                "open",
+                "high",
+                "low",
+                "close",
+                # "adjcp",
+                "volume",
+            ]
+
+            data_df = data_df[columns]
+            if 'adjcp' in data_df.columns:
+                # use adjusted close price instead of close price
+                data_df["close"] = data_df["adjcp"]
+                # drop the adjusted close price column
+                data_df = data_df.drop(labels="adjcp", axis=1)
+
         except NotImplementedError:
             print("the features are not supported currently")
+
         # create day of the week column (monday = 0)
         data_df["day"] = data_df["date"].dt.dayofweek
         # convert date to standard string format, easy to filter
