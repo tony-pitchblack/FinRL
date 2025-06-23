@@ -421,7 +421,15 @@ class YahooFinanceProcessor:
         # Process all tickers with vectorized operations
         print("Processing tickers with vectorized operations...")
         processed_df = complete_df.groupby('tic', group_keys=False).apply(process_ticker_vectorized)
-        
+
+        # --- NEW: ensure index/column name clash does not happen (pandas ≥ 2.x) ---
+        # When 'timestamp' or 'tic' accidentally become index levels as well as
+        # columns, pandas 2.x raises a ValueError due to ambiguity. Guard
+        # against that by resetting the index when necessary.
+        if ('timestamp' in processed_df.index.names) or ('tic' in processed_df.index.names):
+            processed_df = processed_df.reset_index()
+        # -----------------------------------------------------------------------
+
         # Final optimizations
         print("Applying final optimizations...")
         
